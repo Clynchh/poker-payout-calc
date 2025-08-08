@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Payout Calculator</title>
+</head>
+<body>
+    <div class="inputs">
+        <label for="places-paid">Places Paid:</label>
+        <input type="number" id="places-paid" name="places-paid"><br>
+
+        <label for="steepness">Steepness:</label>
+        <input type="number" min="1" max="100" id="steepness" name="steepness"><br>
+
+        <label for="total-prize-pool">Total Prize Pool:</label>
+        <input type="number" id="total-prize-pool" name="total-prize-pool"><br>
+
+        <label for="round-to">Round to nearest:</label>
+        <input type="number" id="round-to" name="round-to"><br>
+
+        <label for="min-cash">Min-Cash:</label>
+        <input type="number" id="min-cash" name="min-cash"><br>
+
+        <button onclick="calc_payouts();">Calculate Payouts</button>
+        <p>Payouts:</p>
+        <ul id="payouts" style="list-style-type: none;"></ul>
+        <button onclick="copyList()">Copy Payouts</button>
+        <p>Variance:</p>
+        <p id="variance"></p>
+    </div>
+
+
+    <script>
+        function calc_payouts(){
+            let places_paid = parseInt(document.getElementById("places-paid").value);
+            let steepness = parseFloat(document.getElementById("steepness").value);
+            let total_prize_pool = parseFloat(document.getElementById("total-prize-pool").value);
+            let round_to = parseFloat(document.getElementById("round-to").value);
+            let min_cash = parseFloat(document.getElementById("min-cash").value);
+
+            let reserved_min_prizepool = min_cash * places_paid;
+            let ladder_prize_pool = total_prize_pool - reserved_min_prizepool;
+
+            let actual_steepness = (100-steepness)/100;
+            let normalise = 0;
+
+            let payout_decays = [];
+            let normalised_decays = [];
+            let realised_payouts = [];
+
+            for (let i = 0; i < places_paid; i++) {
+                let decay = Math.pow(actual_steepness, i + 1);
+                payout_decays.push(decay);
+                normalise += decay;
+            }
+
+            //sum of all the decays should equal 1
+            //sum of all decay * prizepool will equal prizepool
+            //no more, no less
+            for (let i = 0; i < payout_decays.length; i++) {
+                normalised_decays.push(payout_decays[i] / normalise);
+            }
+
+            for (let i = 0; i < normalised_decays.length; i++) {
+                let payout = normalised_decays[i] * ladder_prize_pool;
+                let roundedPayout = (round_to * Math.round((payout + min_cash) / round_to));
+                realised_payouts.push(roundedPayout);
+            }
+
+            //display payouts
+
+            let payouts = document.getElementById("payouts");
+            payouts.innerHTML = "";
+
+            for (let i = 0; i < realised_payouts.length; i++) {
+                let listItem = document.createElement("li");        // Create <li>
+                listItem.innerText = `${i+1}: ${realised_payouts[i]}`;   // Set text
+                payouts.appendChild(listItem);
+                console.log(listItem);                          // Add to <ul>
+            }
+
+            let variance = parseFloat((realised_payouts.reduce((a,b)=> a+b, 0)))-total_prize_pool;
+            console.log(variance);
+            if (variance > 0){
+                document.getElementById("variance").style.color = "green";
+            }
+            else if (variance < 0){
+                document.getElementById("variance").style.color = "red";
+            }
+            else{
+                document.getElementById("variance").style.color = "black";
+            }
+            document.getElementById("variance").innerText = "";
+            document.getElementById("variance").innerText += variance;
+
+        }
+
+        function copyList() {
+            let listItems = document.querySelectorAll("#payouts li");
+            let combinedText = "";
+
+            listItems.forEach(item => {
+                combinedText += item.innerText + "\n";  // Add line breaks
+            });
+
+            // Copy to clipboard using navigator.clipboard
+            navigator.clipboard.writeText(combinedText)
+                .then(() => alert("Copied to clipboard!"))
+                .catch(err => console.error("Failed to copy:", err));
+        }
+    </script>
+</body>
+<style>
+    input{
+        margin-bottom: 20px;
+    }
+</style>
+</html>
